@@ -1,0 +1,138 @@
+{
+  "name": "Travel Itinerary Email Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "travel-itinerary",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [250, 300],
+      "webhookId": "travel-itinerary-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract data from webhook\nconst input = $input.first().json;\n\n// n8n can structure webhook data differently - handle both direct and nested body\nconst email = input.email || input.body?.email;\nconst itinerary = input.itinerary || input.body?.itinerary;\nconst timestamp = input.timestamp || input.body?.timestamp || new Date().toISOString();\n\nif (!email || !itinerary) {\n  throw new Error(`Missing required fields: email or itinerary. Received keys: ${Object.keys(input).join(', ')}`);\n}\n\n// Get itinerary name with fallback to destination or default\nconst itineraryName = itinerary.name || (itinerary.destination ? `${itinerary.destination} Adventure` : 'Your Travel Itinerary');\nconst destination = itinerary.destination || 'your destination';\n\n// Format the itinerary into HTML for the email\nlet htmlContent = `\n<!DOCTYPE html>\n<html>\n<head>\n  <style>\n    body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }\n    h1 { color: #e04d70; border-bottom: 2px solid #e04d70; padding-bottom: 10px; }\n    h2 { color: #c53d5d; margin-top: 30px; }\n    h3 { color: #666; margin-top: 20px; }\n    .day-card { background: #fff5f7; border-radius: 12px; padding: 20px; margin: 20px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }\n    .time-slot { margin: 15px 0; padding-left: 15px; border-left: 3px solid #e04d70; }\n    .activity { background: white; padding: 12px; margin: 10px 0; border-radius: 8px; }\n    .activity-name { font-weight: bold; color: #333; }\n    .activity-details { color: #666; font-size: 0.9em; margin-top: 5px; }\n    .travel-time { color: #888; font-size: 0.85em; font-style: italic; margin-top: 5px; }\n    .sources { background: #f0f0f0; padding: 15px; border-radius: 8px; margin-top: 30px; }\n    .source-link { display: inline-block; background: #e04d70; color: white; padding: 5px 10px; border-radius: 4px; margin: 5px; text-decoration: none; font-size: 0.85em; }\n    .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; color: #888; font-size: 0.85em; }\n  </style>\n</head>\n<body>\n  <h1>🌍 ${itineraryName}</h1>\n  <p style=\"color: #666; font-size: 1.1em;\">📍 ${destination}</p>\n  <p>Generated on ${new Date(timestamp).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>\n`;\n\n// Add each day\nconst dayEmojis = ['🌅', '🌞', '🌄', '🏔️'];\nfor (const day of itinerary.days) {\n  const emoji = dayEmojis[(day.day_number - 1) % dayEmojis.length];\n  htmlContent += `\n  <div class=\"day-card\">\n    <h2>${emoji} Day ${day.day_number}</h2>\n  `;\n  \n  // Group by time slot\n  const slots = ['Morning', 'Afternoon', 'Evening'];\n  const slotEmojis = { 'Morning': '☀️', 'Afternoon': '🌤️', 'Evening': '🌙' };\n  const slotTimes = { 'Morning': '9:00 AM - 12:00 PM', 'Afternoon': '1:00 PM - 5:00 PM', 'Evening': '6:00 PM - 9:00 PM' };\n  \n  for (const slot of slots) {\n    const activities = day.activities.filter(a => a.time_slot === slot);\n    if (activities.length > 0) {\n      htmlContent += `\n      <div class=\"time-slot\">\n        <h3>${slotEmojis[slot]} ${slot} <small style=\"color:#888\">(${slotTimes[slot]})</small></h3>\n      `;\n      \n      for (const activity of activities) {\n        htmlContent += `\n        <div class=\"activity\">\n          <div class=\"activity-name\">📍 ${activity.poi_name}</div>\n          <div class=\"activity-details\">\n            ⏱️ ${activity.duration_minutes} minutes\n            ${activity.notes ? `<br>💡 ${activity.notes}` : ''}\n            ${activity.source ? `<br>📖 Source: ${activity.source}` : ''}\n          </div>\n          ${activity.travel_time_to_next ? `<div class=\"travel-time\">🚗 ${activity.travel_time_to_next} min to next location</div>` : ''}\n        </div>\n        `;\n      }\n      \n      htmlContent += '</div>';\n    }\n  }\n  \n  htmlContent += '</div>';\n}\n\n// Add sources section\nif (itinerary.sources && itinerary.sources.length > 0) {\n  htmlContent += `\n  <div class=\"sources\">\n    <h3>📚 Sources & References</h3>\n    <p>All recommendations are based on verified data from:</p>\n  `;\n  \n  for (const source of itinerary.sources) {\n    const icon = source.type === 'osm' ? '🗺️' : source.type === 'wikivoyage' ? '📖' : '🔍';\n    if (source.url) {\n      htmlContent += `<a href=\"${source.url}\" class=\"source-link\">${icon} ${source.title}</a>`;\n    } else {\n      htmlContent += `<span class=\"source-link\">${icon} ${source.title}</span>`;\n    }\n  }\n  \n  htmlContent += '</div>';\n}\n\n// Footer\nhtmlContent += `\n  <div class=\"footer\">\n    <p>This itinerary was created by the Voice-First AI Travel Planner.</p>\n    <p>Data sourced from OpenStreetMap and Wikivoyage.</p>\n    <p>Have a wonderful trip! ✈️</p>\n  </div>\n</body>\n</html>\n`;\n\nreturn {\n  email,\n  subject: `${itineraryName} - Your Travel Plan`,\n  htmlContent,\n  name: itineraryName,\n  destination: destination,\n  numDays: itinerary.days.length,\n  totalActivities: itinerary.days.reduce((sum, d) => sum + d.activities.length, 0)\n};"
+      },
+      "id": "format-itinerary",
+      "name": "Format Itinerary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [470, 300],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "fromEmail": "anjali71826@gmail.com",
+        "toEmail": "={{ $json.email }}",
+        "subject": "={{ $json.subject }}",
+        "emailType": "html",
+        "html": "={{ $json.htmlContent }}",
+        "options": {}
+      },
+      "id": "send-email",
+      "name": "Send Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [690, 300],
+      "credentials": {
+        "smtp": {
+          "id": "smtp-credentials",
+          "name": "SMTP Credentials"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, message: 'Itinerary sent successfully', name: $json.name, destination: $json.destination, email: $json.email }) }}"
+      },
+      "id": "respond-success",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [910, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, error: $json.message || $json.error || 'Failed to process request' }) }}",
+        "options": {
+          "responseCode": 500
+        }
+      },
+      "id": "respond-error",
+      "name": "Respond Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [910, 500]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Format Itinerary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Itinerary": {
+      "main": [
+        [
+          {
+            "node": "Send Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "travel-planner"
+    }
+  ],
+  "triggerCount": 0,
+  "updatedAt": "2026-01-21T00:00:00.000Z",
+  "versionId": "1"
+}

@@ -1,0 +1,103 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-gradient-to-br from-terracotta-50 to-jaipur-pink-50 min-h-screen;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+}
+
+@layer components {
+  .glass-panel {
+    @apply bg-white/80 backdrop-blur-md rounded-2xl shadow-xl border border-white/20;
+  }
+
+  .voice-orb {
+    @apply relative w-32 h-32 rounded-full bg-gradient-to-br from-jaipur-pink-400 to-jaipur-pink-600;
+    @apply flex items-center justify-center cursor-pointer transition-all duration-300;
+    @apply hover:scale-105 active:scale-95;
+  }
+
+  .voice-orb.listening {
+    @apply animate-orb-glow;
+  }
+
+  .voice-orb.speaking {
+    @apply bg-gradient-to-br from-gold-400 to-gold-600;
+  }
+
+  .day-card {
+    @apply glass-panel p-6 transition-all duration-300 hover:shadow-2xl;
+  }
+
+  .activity-block {
+    @apply bg-white/50 rounded-xl p-4 border-l-4 border-jaipur-pink-400;
+    @apply transition-all duration-200 hover:bg-white/70;
+  }
+
+  .time-slot-morning {
+    @apply border-l-gold-400;
+  }
+
+  .time-slot-afternoon {
+    @apply border-l-terracotta-400;
+  }
+
+  .time-slot-evening {
+    @apply border-l-jaipur-pink-600;
+  }
+
+  .source-chip {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-medium;
+    @apply bg-jaipur-pink-100 text-jaipur-pink-700 hover:bg-jaipur-pink-200;
+    @apply transition-colors duration-200 cursor-pointer;
+  }
+
+  .transcript-bubble {
+    @apply max-w-[80%] rounded-2xl px-4 py-2 mb-2;
+  }
+
+  .transcript-bubble.user {
+    @apply bg-jaipur-pink-500 text-white ml-auto;
+  }
+
+  .transcript-bubble.assistant {
+    @apply bg-white text-gray-800 shadow-md;
+  }
+}
+
+/* Audio visualizer animations */
+@keyframes wave {
+  0%, 100% { height: 10%; }
+  50% { height: 100%; }
+}
+
+.audio-bar {
+  @apply bg-white/80 rounded-full;
+  animation: wave 1s ease-in-out infinite;
+}
+
+.audio-bar:nth-child(1) { animation-delay: 0s; }
+.audio-bar:nth-child(2) { animation-delay: 0.1s; }
+.audio-bar:nth-child(3) { animation-delay: 0.2s; }
+.audio-bar:nth-child(4) { animation-delay: 0.3s; }
+.audio-bar:nth-child(5) { animation-delay: 0.4s; }
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-jaipur-pink-200 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-jaipur-pink-300;
+}
