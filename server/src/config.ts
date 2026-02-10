@@ -11,7 +11,7 @@ export const config = {
 
   // Gemini Multimodal Live API
   gemini: {
-    model: 'models/gemini-2.5-flash-preview-tts',
+    model: 'models/gemini-2.5-flash-latest',
     wsUrl: `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent`,
   },
 
