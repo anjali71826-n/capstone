@@ -124,7 +124,7 @@ export class GeminiTextClient {
   }
 
   private async callGeminiAPI(): Promise<GenerateContentResponse> {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${config.googleApiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${config.googleApiKey}`;
 
     const tools = getToolsForGemini();
 
